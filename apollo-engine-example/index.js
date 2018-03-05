@@ -6,6 +6,7 @@ const fetch = require("node-fetch");
 const {
   makeRemoteExecutableSchema,
   introspectSchema,
+  mergeSchemas,
 } = require("graphql-tools");
 const { ApolloEngine } = require("apollo-engine");
 
@@ -15,17 +16,45 @@ const PORT = 3000;
 const app = express();
 const engine = new ApolloEngine({
   apiKey: process.env.ENGINE_API_KEY,
+  stores: [
+    {
+      name: "publicResponseCache",
+      inMemory: {
+        cacheSize: 10485760,
+      },
+    },
+  ],
+  queryCache: {
+    publicFullQueryStore: "publicResponseCache",
+  },
 });
 const start = async () => {
   const sangria = await introspectSchema(link);
 
-  const schema = makeRemoteExecutableSchema({ schema: sangria, link });
+  const sangriaSchema = makeRemoteExecutableSchema({ schema: sangria, link });
+  const cacheDefs = `
+  extend type Query {
+    droidWithCache(id: String!): Droid! @cacheControl(maxAge: 240)
+  }`;
+
+  const schema = mergeSchemas({
+    schemas: [sangriaSchema, cacheDefs],
+    resolvers: mergeInfo => ({
+      Query: {
+        droidWithCache: {
+          resolve(parent, args, context, info) {
+            return mergeInfo.delegate("query", "droid", args, context, info);
+          },
+        },
+      },
+    }),
+  });
 
   // bodyParser is needed just for POST.
   app.use(
     "/graphql",
     bodyParser.json(),
-    graphqlExpress({ schema, tracing: true })
+    graphqlExpress({ schema, tracing: true, context: {}, cacheControl: true })
   );
   app.use("/graphiql", graphiqlExpress({ endpointURL: "/graphql" }));
 
