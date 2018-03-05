@@ -1,4 +1,4 @@
-# NYTExample
+# Stitched Sangria
 
 This repo shows how to use a node server to try out Engine with an existing Sangria backend. It is made up of two parts:
 
@@ -31,3 +31,12 @@ query DroidWithTracing {
 ### View in Engine
 
 Now you should be able to open the service in [Engine](https://engine.apollographql.com) to see trace data!
+
+### Changes to Sangria example
+
+In order to get tracing data from Sangria, you need to make two changes to that app:
+
+1. [add the sangria tracing package](https://github.com/jbaxleyiii/nyt/blob/e1cfe1832e084c766a7d94525ca17216830081ad/sangria/build.sbt#L12)
+2. [install the middleware](https://github.com/jbaxleyiii/nyt/blob/e1cfe1832e084c766a7d94525ca17216830081ad/sangria/src/main/scala/Server.scala#L47)
+
+Thats it! Now tracing data will come all the way from sangira through the node wrapper to be reported to engine!
